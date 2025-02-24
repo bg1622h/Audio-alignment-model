@@ -19,7 +19,7 @@ class BaseTrainer:
         self,
         model,
         criterion,
-        metrics,
+        #metrics,
         optimizer,
         lr_scheduler,
         config,
@@ -71,6 +71,7 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+        self.step = 0
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -116,18 +117,18 @@ class BaseTrainer:
         self.writer = writer
 
         # define metrics
-        self.metrics = metrics
-        self.train_metrics = MetricTracker(
-            *self.config.writer.loss_names,
-            "grad_norm",
-            *[m.name for m in self.metrics["train"]],
-            writer=self.writer,
-        )
-        self.evaluation_metrics = MetricTracker(
-            *self.config.writer.loss_names,
-            *[m.name for m in self.metrics["inference"]],
-            writer=self.writer,
-        )
+        #self.metrics = metrics
+        #self.train_metrics = MetricTracker(
+        #    *self.config.writer.loss_names,
+        #    "grad_norm",
+        #    *[m.name for m in self.metrics["train"]],
+        #    writer=self.writer,
+        #)
+        #self.evaluation_metrics = MetricTracker(
+        #    *self.config.writer.loss_names,
+        #    *[m.name for m in self.metrics["inference"]],
+        #    writer=self.writer,
+        #)
 
         # define checkpoint dir and init everything if required
 
@@ -162,17 +163,18 @@ class BaseTrainer:
         and saving the best checkpoint).
         """
         not_improved_count = 0
+        self.step = 0
         for epoch in range(self.start_epoch, self.epochs + 1):
             self._last_epoch = epoch
             result = self._train_epoch(epoch)
 
             # save logged information into logs dict
-            logs = {"epoch": epoch}
-            logs.update(result)
+            #logs = {"epoch": epoch}
+            #logs.update(result)
 
             # print logged information to the screen
-            for key, value in logs.items():
-                self.logger.info(f"    {key:15s}: {value}")
+            #for key, value in logs.items():
+            #    self.logger.info(f"    {key:15s}: {value}")
 
             # evaluate model performance according to configured metric,
             # save best checkpoint as model_best
@@ -185,6 +187,7 @@ class BaseTrainer:
 
             if stop_process:  # early_stop
                 break
+        
 
     def _train_epoch(self, epoch):
         """
@@ -199,7 +202,7 @@ class BaseTrainer:
         """
         self.is_train = True
         self.model.train()
-        self.train_metrics.reset()
+        #self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
         for batch_idx, batch in enumerate(
@@ -208,7 +211,7 @@ class BaseTrainer:
             try:
                 batch = self.process_batch(
                     batch,
-                    metrics=self.train_metrics,
+                    #metrics=self.train_metrics,
                 )
             except torch.cuda.OutOfMemoryError as e:
                 if self.skip_oom:
@@ -217,37 +220,40 @@ class BaseTrainer:
                     continue
                 else:
                     raise e
-
-            self.train_metrics.update("grad_norm", self._get_grad_norm())
+            #self.train_metrics.update("grad_norm", self._get_grad_norm())
 
             # log current results
-            if batch_idx % self.log_step == 0:
-                self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
+            if self.step % self.log_step == 0:
+                self.writer.set_step(self.step)
                 self.logger.debug(
                     "Train Epoch: {} {} Loss: {:.6f}".format(
                         epoch, self._progress(batch_idx), batch["loss"].item()
                     )
                 )
                 self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
+                    "Train Loss", batch["loss"].item()
                 )
-                self._log_scalars(self.train_metrics)
-                self._log_batch(batch_idx, batch)
+                self.writer.add_scalar(
+                    "rate", self.lr_scheduler.get_last_lr()[0]
+                )
+                #self._log_scalars(self.train_metrics)
+                #self._log_batch(batch_idx, batch)
                 # we don't want to reset train metrics at the start of every epoch
                 # because we are interested in recent train metrics
-                last_train_metrics = self.train_metrics.result()
-                self.train_metrics.reset()
+                #last_train_metrics = self.train_metrics.result()
+                #self.train_metrics.reset()
+            self.step+=1
             if batch_idx + 1 >= self.epoch_len:
                 break
 
-        logs = last_train_metrics
+        #logs = last_train_metrics
 
         # Run val/test
-        for part, dataloader in self.evaluation_dataloaders.items():
-            val_logs = self._evaluation_epoch(epoch, part, dataloader)
-            logs.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
+        #for part, dataloader in self.evaluation_dataloaders.items():
+        #    val_logs = self._evaluation_epoch(epoch, part, dataloader)
+        #    logs.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
 
-        return logs
+        #return logs
 
     def _evaluation_epoch(self, epoch, part, dataloader):
         """

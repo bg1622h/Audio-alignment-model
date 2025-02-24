@@ -38,18 +38,22 @@ def main(config):
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
+    model = instantiate(config.model)
+    model = torch.nn.DataParallel(model)
+    model = model.to(device)
     logger.info(model)
 
     # get function handles of loss and metrics
     loss_function = instantiate(config.loss_function).to(device)
-    metrics = instantiate(config.metrics)
+    #metrics = instantiate(config.metrics)
 
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = instantiate(config.optimizer, params=trainable_params)
+    if config.lr_scheduler.T_max is None:
+        config.lr_scheduler.T_max = len(dataloaders['train']) * config.trainer.n_epochs
     lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
-
+    
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
     epoch_len = config.trainer.get("epoch_len")
@@ -57,7 +61,7 @@ def main(config):
     trainer = Trainer(
         model=model,
         criterion=loss_function,
-        metrics=metrics,
+        #metrics=metrics,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         config=config,
@@ -67,7 +71,7 @@ def main(config):
         logger=logger,
         writer=writer,
         batch_transforms=batch_transforms,
-        skip_oom=config.trainer.get("skip_oom", True),
+        skip_oom=config.trainer.get("skip_oom", True),#Out of memory
     )
 
     trainer.train()

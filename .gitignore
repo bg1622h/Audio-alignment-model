@@ -102,6 +102,7 @@ ENV/
 
 # input data, saved log, checkpoints, hydra outputs
 data/
+dataset/
 input/
 saved/
 wandb/

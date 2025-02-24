@@ -1,13 +1,14 @@
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
-
+import numpy as np
+import torch
 
 class Trainer(BaseTrainer):
     """
     Trainer class. Defines the logic of batch logging and processing.
     """
 
-    def process_batch(self, batch, metrics: MetricTracker):
+    def process_batch(self, batch):#, metrics: MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -29,15 +30,39 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        metric_funcs = self.metrics["inference"]
+        #metric_funcs = self.metrics["inference"]
         if self.is_train:
-            metric_funcs = self.metrics["train"]
+            #metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
 
         outputs = self.model(**batch)
-        batch.update(outputs)
-
-        all_losses = self.criterion(**batch)
+        labels = batch['notes']
+        targ_excerpt = labels.detach().numpy().transpose(0,2,1)
+        """
+        The code below leaves unique columns in the sense of removing duplicates throughout the array, 
+        and leaves only those columns where there is a change in values from the previous column.
+        It then adds 0 column corresponding to silence
+        """
+        targets_array = []
+        all_losses = 0
+        for y_pred,batch_target in zip(outputs,targ_excerpt):
+            inds = np.concatenate((np.array([0]), 1+np.where((batch_target[:, 1:]!=batch_target[:, :-1]).any(axis=0))[0]))
+            target_np = batch_target[:, inds]
+            target_blank = np.zeros((target_np.shape[0]+1, target_np.shape[1]+1))
+            target_blank[1:, 1:] = target_np
+            target_blank[0, 0] = 1
+            targets = torch.tensor(target_blank).to(self.device)
+            log_probs = y_pred.squeeze().T
+            input_lengths = torch.tensor(log_probs.size(-1), dtype=torch.long).to(self.device)
+            target_lengths = torch.tensor(targets.size(-1), dtype=torch.long).to(self.device)
+            loss_input = {
+                'targets': targets,
+                'log_probs': log_probs,
+                'input_lengths': input_lengths,
+                'target_lengths': target_lengths
+            }
+            all_losses = all_losses + self.criterion(**loss_input)/ (input_lengths*target_lengths)
+        all_losses/=len(targ_excerpt)
         batch.update(all_losses)
 
         if self.is_train:
@@ -48,11 +73,11 @@ class Trainer(BaseTrainer):
                 self.lr_scheduler.step()
 
         # update metrics for each loss (in case of multiple losses)
-        for loss_name in self.config.writer.loss_names:
-            metrics.update(loss_name, batch[loss_name].item())
+        #for loss_name in self.config.writer.loss_names:
+        #    metrics.update(loss_name, batch[loss_name].item())
 
-        for met in metric_funcs:
-            metrics.update(met.name, met(**batch))
+        #for met in metric_funcs:
+        #    metrics.update(met.name, met(**batch))
         return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):
