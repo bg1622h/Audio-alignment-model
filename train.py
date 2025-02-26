@@ -73,9 +73,8 @@ def main(config):
         batch_transforms=batch_transforms,
         skip_oom=config.trainer.get("skip_oom", True),#Out of memory
     )
-
     trainer.train()
-
+    torch.save(model.state_dict(), "outmodel.pt")
 
 if __name__ == "__main__":
     main()

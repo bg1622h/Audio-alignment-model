@@ -51,8 +51,9 @@ class Trainer(BaseTrainer):
             target_blank = np.zeros((target_np.shape[0]+1, target_np.shape[1]+1))
             target_blank[1:, 1:] = target_np
             target_blank[0, 0] = 1
-            targets = torch.tensor(target_blank).to(self.device)
-            log_probs = y_pred.squeeze().T
+            targets = torch.tensor(target_blank, dtype=torch.float32).to(self.device)
+            #targets = torch.tensor(batch_target.T)
+            log_probs = y_pred.squeeze().transpose(1,2)
             input_lengths = torch.tensor(log_probs.size(-1), dtype=torch.long).to(self.device)
             target_lengths = torch.tensor(targets.size(-1), dtype=torch.long).to(self.device)
             loss_input = {
@@ -63,7 +64,7 @@ class Trainer(BaseTrainer):
             }
             all_losses = all_losses + self.criterion(**loss_input)/ (input_lengths*target_lengths)
         all_losses/=len(targ_excerpt)
-        batch.update(all_losses)
+        batch.update({"loss": all_losses})
 
         if self.is_train:
             batch["loss"].backward()  # sum of all losses is always called loss

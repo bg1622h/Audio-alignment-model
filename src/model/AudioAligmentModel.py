@@ -96,13 +96,17 @@ class AudioAligmentModel(nn.Module):
             ConformerBlock(d_model, nhead,ffn_expansion_factor, kernel_size, dropout)
             for i in range(num_blocks)
         ])
-        self.output = nn.Linear(d_model, num_classes)
+        self.final_block1 = ConformerBlock(d_model, nhead,ffn_expansion_factor, kernel_size, dropout)
+        self.final_block2 = ConformerBlock(d_model, nhead,ffn_expansion_factor, kernel_size, dropout)
+        self.output1 = nn.Linear(d_model,num_classes)
+        self.output2 = nn.Linear(d_model, num_classes)
+        #self.output = nn.Linear(d_model, num_classes)
         self.log_softmax =  nn.LogSoftmax(dim = 1)
 
     def forward(self, audio, **batch):
-        print(audio.size())
+        # print(audio.size())
         x = self.conv_layer(audio)
-        print(x.size())
+        # print(x.size())
         #print(x.size())
         #x = self.linear(x)
         x = x.permute(0,2,1)
@@ -112,6 +116,12 @@ class AudioAligmentModel(nn.Module):
         #print(x.size())target_size
         for block in self.conformer:
             x = block(x)
-        output = self.output(x)
-        return self.log_softmax(output)
+        #output = self.output(x)
+        out_false = self.output1(self.final_block1(x))
+        out_true = self.output2(self.final_block2(x))
+        stacked = torch.stack([out_false, out_true], dim=1)
+        output_logits = self.log_softmax(stacked)
+        return output_logits
+        #return torch.sigmoid(output)
+        #return output
         #return self.output(x)
