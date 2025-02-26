@@ -111,6 +111,7 @@ wandb/
 outputs/
 libdl/
 libfmp/
+*csv
 
 # editor, os cache directory
 .vscode/

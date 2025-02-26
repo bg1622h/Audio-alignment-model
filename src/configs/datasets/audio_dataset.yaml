@@ -3,7 +3,7 @@ train:
   audio_dir: "./dataset"
   midi_dir: "./dataset"
   hop_size: 1024
-  dataset_size: 2
+  dataset_size: 4
   new_sr: 44100
   frame_size: 1
 #val:
@@ -19,6 +19,6 @@ test:
   audio_dir: "./dataset"
   midi_dir: "./dataset"
   hop_size: 1024
-  dataset_size: 2
+  dataset_size: 4
   new_sr: 44100
   frame_size: 1

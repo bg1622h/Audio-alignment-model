@@ -15,8 +15,8 @@ lr_scheduler:
 loss_function:
   _target_: src.loss.MCTCloss.mctc_we_loss
 trainer:
-  log_step: 25
-  n_epochs: 15
+  log_step: 50
+  n_epochs: 50
   epoch_len: null
   device_tensors: ["audio","notes"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml

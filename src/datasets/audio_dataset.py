@@ -32,6 +32,7 @@ class MusicDataset(Dataset):
         self.transform = kwargs.get('transform',None)
         self.frame_size = kwargs['frame_size']
         waveform, sr = librosa.load(self.audio_file, sr=None)
+        self.duration = librosa.get_duration(y=waveform, sr=sr)
         if sr != self.new_sr:
             waveform = librosa.resample(waveform, orig_sr=sr, target_sr=self.new_sr)
             sr = self.new_sr
@@ -72,6 +73,8 @@ class MusicDataset(Dataset):
             'audio': self.audio_segments[index],
             'notes': self.notes_segments[index]
         }
+    def get_duration(self):
+        return self.duration
 class AudioDataset(BaseDataset):
     """
     Dataset for audio and MIDI processing split into fixed 2-second segments.
@@ -84,7 +87,9 @@ class AudioDataset(BaseDataset):
         self.transform = transform
         self.frame_size = frame_size
         self.audio_files = [f for f in os.listdir(audio_dir) if f.endswith((".wav", ".mp3"))]
-        self.midi_files = [f for f in os.listdir(midi_dir) if f.endswith((".midi"))]        
+        self.midi_files = [f for f in os.listdir(midi_dir) if f.endswith((".midi"))]
+        self.midi_path_list = []
+        self.durations = []
         assert len(self.audio_files) == len(self.midi_files), (
             f"Audio files count: {len(self.audio_files)} but MIDI files count: {len(self.midi_files)}"
         )
@@ -106,6 +111,7 @@ class AudioDataset(BaseDataset):
                 raise ValueError(f"Mismatch: {name_audio}.midi and {name_midi}.* audio file")
             audio_path = os.path.join(self.audio_dir, audio_file)
             midi_path = os.path.join(self.midi_dir, midi_file)
+            self.midi_path_list.append(midi_path)
             params = {
                 'audio_file': audio_path,
                 'midi_file': midi_path,
@@ -115,9 +121,14 @@ class AudioDataset(BaseDataset):
                 'frame_size': frame_size
             }
             datasets.append(MusicDataset(**params))
+            self.durations.append(datasets[-1].get_duration())
         
         self.concat_datasets = ConcatDataset(datasets)
     def __len__(self):
         return len(self.concat_datasets)
     def __getitem__(self, index):
         return self.concat_datasets[index]
+    def get_midi_files(self,index):
+        return self.midi_path_list[index]
+    def get_duration(self,index):
+        return self.durations[index]
