@@ -1,0 +1,9 @@
+_target_: src.model.AudioAligmentModel
+input_dim: 144
+num_classes: 129
+num_blocks: 16
+d_model: 144
+nhead: 4
+ffn_expansion_factor: 4
+kernel_size: 32
+dropout: 0.1

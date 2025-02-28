@@ -24,7 +24,7 @@ class Swish(nn.Module):
         return x * torch.sigmoid(x)
 
 class FeedForwardModule(nn.Module):
-    def __init__(self, d_model, expansion_factor = 4.0, dropout = 0.2):
+    def __init__(self, d_model, expansion_factor = 4.0, dropout = 0.1):
         super(FeedForwardModule, self).__init__()
         self.fnn = nn.Sequential(
             nn.LayerNorm(d_model),
@@ -48,13 +48,13 @@ class MutliHead_SelfAttention(nn.Module):
         return input + x
 
 class ConvolutionModule(nn.Module):
-    def __init__(self, d_model, kernel_size = 31, dropout = 0.1): #10 - fixed value
+    def __init__(self, d_model, kernel_size, dropout): #10 - fixed value
         super(ConvolutionModule,self).__init__()
         self.conv = nn.Sequential(
             #nn.LayerNorm(d_model),
             nn.Conv1d(d_model, 2 * d_model, kernel_size=1, groups = d_model),
             nn.GLU(dim = 1),
-            nn.Conv1d(d_model, d_model, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, groups=d_model),
+            nn.Conv1d(d_model, d_model, kernel_size=kernel_size, padding = (kernel_size - 1) // 2  + ((kernel_size + 1) % 2), groups=d_model),
             nn.BatchNorm1d(d_model),
             Swish(),
             nn.Conv1d(d_model, d_model, kernel_size=1, groups=d_model),
@@ -65,10 +65,12 @@ class ConvolutionModule(nn.Module):
         #print(x.size())
         x = self.conv(x.permute(0,2,1))
         x = x.permute(0,2,1)
+        if x.size(1) != input.size(1): #такое просто может быть
+            x = x[:, :input.size(1), :]
         return x + input
     
 class ConformerBlock(nn.Module):
-    def __init__(self, d_model, nhead, ffn_expansion_factor = 4, kernel_size = 31, dropout = 0.1):
+    def __init__(self, d_model, nhead, ffn_expansion_factor, kernel_size, dropout):
         super(ConformerBlock, self).__init__()
         self.fnn1 = FeedForwardModule(d_model, ffn_expansion_factor, dropout)
         self.self_attention = MutliHead_SelfAttention(d_model, nhead, dropout)
@@ -84,8 +86,8 @@ class ConformerBlock(nn.Module):
         return self.norm(x)
 
 class AudioAligmentModel(nn.Module):
-    def __init__(self, input_dim, num_classes, num_blocks = 4, d_model = 256, nhead = 2, ffn_expansion_factor = 4, 
-                 kernel_size = 31, dropout = 0.1):
+    def __init__(self, input_dim, num_classes, num_blocks, d_model, nhead, ffn_expansion_factor, 
+                 kernel_size, dropout):
         super(AudioAligmentModel, self).__init__()
         self.d_model = d_model
         self.conv_layer = nn.Conv1d(input_dim, d_model, kernel_size=3, stride=1, padding=1)
