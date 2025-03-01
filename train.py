@@ -74,7 +74,6 @@ def main(config):
         skip_oom=config.trainer.get("skip_oom", True),#Out of memory
     )
     trainer.train()
-    torch.save(model.state_dict(), "outmodel_long100.pt")
 
 if __name__ == "__main__":
     main()

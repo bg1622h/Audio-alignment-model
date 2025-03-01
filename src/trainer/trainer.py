@@ -2,13 +2,34 @@ from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 
 class Trainer(BaseTrainer):
     """
     Trainer class. Defines the logic of batch logging and processing.
     """
+    def create_log_plot(self, input, target, predict):
+        """
+        lengths of all the data are the same
+        """
+        fig, axes = plt.subplots(len(input), 4, figsize=(12, 12))
+        axes[0,0].set_title("Input")
+        for i in range(len(input)):
+            axes[i,0].imshow(input[i], cmap='viridis', interpolation='nearest')
+        axes[0,1].set_title("Target")
+        for i in range(len(target)):
+            axes[i,1].imshow(target[i], cmap='viridis', interpolation='nearest')
+        axes[0,2].set_title("Predict")
+        for i in range(len(predict)):
+            im = axes[i,2].imshow(np.exp(predict[i]), cmap='viridis', interpolation='nearest')
+            fig.colorbar(im,ax=axes[i,2],label="Value")
+        for i in range(len(predict)):
+            im = axes[i,3].imshow((np.exp(predict[i]) > 0.5).int(), cmap='viridis', interpolation='nearest')
+            fig.colorbar(im,ax=axes[i,3],label="Value")
+        fig.suptitle("Input, Target, Predict, exp Predict")
+        return fig
 
-    def process_batch(self, batch):#, metrics: MetricTracker):
+    def process_batch(self, batch, log_plots = False):#, metrics: MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -72,6 +93,15 @@ class Trainer(BaseTrainer):
             self.optimizer.step()
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
+        if log_plots:
+            self.writer.add_image("Visualization",
+                                  self.create_log_plot
+                                  (
+                                    batch['audio'][:4],
+                                    targ_excerpt[:4], 
+                                    np.transpose(outputs[:4,1,:,1:], (0,2,1))
+                                  )
+                                )
 
         # update metrics for each loss (in case of multiple losses)
         #for loss_name in self.config.writer.loss_names:

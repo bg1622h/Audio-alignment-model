@@ -11,10 +11,9 @@ def midi_processing(midi_path, hop_size, sr, audio_size):
     data = []
     max_time = 0
     for instrument in midi_data.instruments:
-        if 0<=instrument.program <= 7: #Just piano
-            for note in instrument.notes:
-                data.append([note.pitch, note.start, note.end])
-                max_time = note.end
+        for note in instrument.notes:
+            data.append([note.pitch, note.start, note.end])
+            max_time = note.end
     out = np.zeros((audio_size, 128))
     for pitch, start, end in data:
         for j in range(round((start * sr)/hop_size),round((end * sr)/hop_size)):

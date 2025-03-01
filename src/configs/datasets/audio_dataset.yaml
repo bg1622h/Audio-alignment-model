@@ -1,12 +1,18 @@
 train:
   _target_: src.datasets.AudioDataset
-  audio_dir: "./dataset"
-  midi_dir: "./dataset"
+  audio_dir: "./dataset/train"
+  midi_dir: "./dataset/train"
   hop_size: 1024
-  dataset_size: 4
   new_sr: 44100
   frame_size: 1
-#val:
+val:
+  _target_: src.datasets.AudioDataset
+  audio_dir: "./dataset/val"
+  midi_dir: "./dataset/val"
+  hop_size: 1024
+  new_sr: 44100
+  frame_size: 1
+#test:
 #  _target_: src.datasets.AudioDataset
 #  audio_dir: "./dataset"
 #  midi_dir: "./dataset"
@@ -14,11 +20,3 @@ train:
 #  dataset_size: 1
 #  new_sr: 22050
 #  frame_size: 1
-test:
-  _target_: src.datasets.AudioDataset
-  audio_dir: "./dataset"
-  midi_dir: "./dataset"
-  hop_size: 1024
-  dataset_size: 4
-  new_sr: 44100
-  frame_size: 1
