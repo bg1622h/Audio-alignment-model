@@ -1,35 +1,44 @@
-from src.metrics.tracker import MetricTracker
-from src.trainer.base_trainer import BaseTrainer
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
+
+from src.metrics.tracker import MetricTracker
+from src.trainer.base_trainer import BaseTrainer
+
 
 class Trainer(BaseTrainer):
     """
     Trainer class. Defines the logic of batch logging and processing.
     """
+
     def create_log_plot(self, input, target, predict):
         """
         lengths of all the data are the same
         """
         fig, axes = plt.subplots(len(input), 4, figsize=(12, 12))
-        axes[0,0].set_title("Input")
+        axes[0, 0].set_title("Input")
         for i in range(len(input)):
-            axes[i,0].imshow(input[i], cmap='viridis', interpolation='nearest')
-        axes[0,1].set_title("Target")
+            axes[i, 0].imshow(input[i], cmap="viridis", interpolation="nearest")
+        axes[0, 1].set_title("Target")
         for i in range(len(target)):
-            axes[i,1].imshow(target[i], cmap='viridis', interpolation='nearest')
-        axes[0,2].set_title("Predict")
+            axes[i, 1].imshow(target[i], cmap="viridis", interpolation="nearest")
+        axes[0, 2].set_title("Predict")
         for i in range(len(predict)):
-            im = axes[i,2].imshow(np.exp(predict[i]), cmap='viridis', interpolation='nearest')
-            fig.colorbar(im,ax=axes[i,2],label="Value")
+            im = axes[i, 2].imshow(
+                np.exp(predict[i]), cmap="viridis", interpolation="nearest"
+            )
+            fig.colorbar(im, ax=axes[i, 2], label="Value")
         for i in range(len(predict)):
-            im = axes[i,3].imshow((np.exp(predict[i]) > 0.5).int(), cmap='viridis', interpolation='nearest')
-            fig.colorbar(im,ax=axes[i,3],label="Value")
+            im = axes[i, 3].imshow(
+                (np.exp(predict[i]) > 0.5).int(),
+                cmap="viridis",
+                interpolation="nearest",
+            )
+            fig.colorbar(im, ax=axes[i, 3], label="Value")
         fig.suptitle("Input, Target, Predict, exp Predict")
         return fig
 
-    def process_batch(self, batch, log_plots = False):#, metrics: MetricTracker):
+    def process_batch(self, batch, log_plots=False):  # , metrics: MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -51,40 +60,53 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        #metric_funcs = self.metrics["inference"]
+        # metric_funcs = self.metrics["inference"]
         if self.is_train:
-            #metric_funcs = self.metrics["train"]
+            # metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
 
         outputs = self.model(**batch)
-        labels = batch['notes']
-        targ_excerpt = labels.detach().numpy().transpose(0,2,1)
+        labels = batch["notes"]
+        targ_excerpt = labels.detach().numpy().transpose(0, 2, 1)
         """
-        The code below leaves unique columns in the sense of removing duplicates throughout the array, 
+        The code below leaves unique columns in the sense of removing duplicates throughout the array,
         and leaves only those columns where there is a change in values from the previous column.
         It then adds 0 column corresponding to silence
         """
-        targets_array = []
         all_losses = 0
-        for y_pred,batch_target in zip(outputs,targ_excerpt):
-            inds = np.concatenate((np.array([0]), 1+np.where((batch_target[:, 1:]!=batch_target[:, :-1]).any(axis=0))[0]))
+        for y_pred, batch_target in zip(outputs, targ_excerpt):
+            inds = np.concatenate(
+                (
+                    np.array([0]),
+                    1
+                    + np.where(
+                        (batch_target[:, 1:] != batch_target[:, :-1]).any(axis=0)
+                    )[0],
+                )
+            )
             target_np = batch_target[:, inds]
-            target_blank = np.zeros((target_np.shape[0]+1, target_np.shape[1]+1))
+            target_blank = np.zeros((target_np.shape[0] + 1, target_np.shape[1] + 1))
             target_blank[1:, 1:] = target_np
             target_blank[0, 0] = 1
             targets = torch.tensor(target_blank, dtype=torch.float32).to(self.device)
-            #targets = torch.tensor(batch_target.T)
-            log_probs = y_pred.squeeze().transpose(1,2)
-            input_lengths = torch.tensor(log_probs.size(-1), dtype=torch.long).to(self.device)
-            target_lengths = torch.tensor(targets.size(-1), dtype=torch.long).to(self.device)
+            # targets = torch.tensor(batch_target.T)
+            log_probs = y_pred.squeeze().transpose(1, 2)
+            input_lengths = torch.tensor(log_probs.size(-1), dtype=torch.long).to(
+                self.device
+            )
+            target_lengths = torch.tensor(targets.size(-1), dtype=torch.long).to(
+                self.device
+            )
             loss_input = {
-                'targets': targets,
-                'log_probs': log_probs,
-                'input_lengths': input_lengths,
-                'target_lengths': target_lengths
+                "targets": targets,
+                "log_probs": log_probs,
+                "input_lengths": input_lengths,
+                "target_lengths": target_lengths,
             }
-            all_losses = all_losses + self.criterion(**loss_input)/ (input_lengths*target_lengths)
-        all_losses/=len(targ_excerpt)
+            all_losses = all_losses + self.criterion(**loss_input) / (
+                input_lengths * target_lengths
+            )
+        all_losses /= len(targ_excerpt)
         batch.update({"loss": all_losses})
 
         if self.is_train:
@@ -94,20 +116,20 @@ class Trainer(BaseTrainer):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
         if log_plots:
-            self.writer.add_image("Visualization",
-                                  self.create_log_plot
-                                  (
-                                    batch['audio'][:4],
-                                    targ_excerpt[:4], 
-                                    np.transpose(outputs[:4,1,:,1:], (0,2,1))
-                                  )
-                                )
+            self.writer.add_image(
+                "Visualization",
+                self.create_log_plot(
+                    batch["audio"][:4],
+                    targ_excerpt[:4],
+                    np.transpose(outputs[:4, 1, :, 1:], (0, 2, 1)),
+                ),
+            )
 
         # update metrics for each loss (in case of multiple losses)
-        #for loss_name in self.config.writer.loss_names:
+        # for loss_name in self.config.writer.loss_names:
         #    metrics.update(loss_name, batch[loss_name].item())
 
-        #for met in metric_funcs:
+        # for met in metric_funcs:
         #    metrics.update(met.name, met(**batch))
         return batch
 

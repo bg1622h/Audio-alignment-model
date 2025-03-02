@@ -1,3 +1,4 @@
+import random
 from abc import abstractmethod
 
 import torch
@@ -8,7 +9,7 @@ from tqdm.auto import tqdm
 from src.datasets.data_utils import inf_loop
 from src.metrics.tracker import MetricTracker
 from src.utils.io_utils import ROOT_PATH
-import random
+
 
 class BaseTrainer:
     """
@@ -19,7 +20,7 @@ class BaseTrainer:
         self,
         model,
         criterion,
-        #metrics,
+        # metrics,
         optimizer,
         lr_scheduler,
         config,
@@ -118,18 +119,18 @@ class BaseTrainer:
         self.writer = writer
 
         # define metrics
-        #self.metrics = metrics
-        #self.train_metrics = MetricTracker(
+        # self.metrics = metrics
+        # self.train_metrics = MetricTracker(
         #    *self.config.writer.loss_names,
         #    "grad_norm",
         #    *[m.name for m in self.metrics["train"]],
         #    writer=self.writer,
-        #)
-        #self.evaluation_metrics = MetricTracker(
+        # )
+        # self.evaluation_metrics = MetricTracker(
         #    *self.config.writer.loss_names,
         #    *[m.name for m in self.metrics["inference"]],
         #    writer=self.writer,
-        #)
+        # )
 
         # define checkpoint dir and init everything if required
 
@@ -175,27 +176,26 @@ class BaseTrainer:
 
             # print logged information to the screen
             for key, value in logs.items():
-                self.logger.info(f"    {key:15s}: {value}")
-            
+                self.logger.info(f"    {key: 15s}: {value}")
+
             best, stop_process, not_improved_count = self._monitor_performance_loss(
                 logs, not_improved_count
             )
             if best:
-                self._save_checkpoint(epoch,save_best=best,only_best=True)
+                self._save_checkpoint(epoch, save_best=best, only_best=True)
             if stop_process:
                 break
             # evaluate model performance according to configured metric,
             # save best checkpoint as model_best
-            #best, stop_process, not_improved_count = self._monitor_performance(
+            # best, stop_process, not_improved_count = self._monitor_performance(
             #    logs, not_improved_count
-            #)
+            # )
 
-            #if epoch % self.save_period == 0 or best:
+            # if epoch % self.save_period == 0 or best:
             #    self._save_checkpoint(epoch, save_best=best, only_best=True)
-            #self._save_checkpoint(epoch, save_best=best, only_best=True)
-            #if stop_process:  # early_stop
+            # self._save_checkpoint(epoch, save_best=best, only_best=True)
+            # if stop_process:  # early_stop
             #    break
-        
 
     def _train_epoch(self, epoch):
         """
@@ -210,7 +210,7 @@ class BaseTrainer:
         """
         self.is_train = True
         self.model.train()
-        #self.train_metrics.reset()
+        # self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
         for batch_idx, batch in enumerate(
@@ -219,7 +219,7 @@ class BaseTrainer:
             try:
                 batch = self.process_batch(
                     batch,
-                    #metrics=self.train_metrics,
+                    # metrics=self.train_metrics,
                 )
             except torch.cuda.OutOfMemoryError as e:
                 if self.skip_oom:
@@ -228,34 +228,28 @@ class BaseTrainer:
                     continue
                 else:
                     raise e
-            #self.train_metrics.update("grad_norm", self._get_grad_norm())
+            # self.train_metrics.update("grad_norm", self._get_grad_norm())
 
             # log current results
             if self.step % self.log_step == 0:
-                self.writer.set_step(self.step,'train')
+                self.writer.set_step(self.step, "train")
                 self.logger.debug(
                     "train epoch: {} {} loss: {:.6f}".format(
                         epoch, self._progress(batch_idx), batch["loss"].item()
                     )
                 )
-                self.writer.add_scalar(
-                    "train loss", batch["loss"].item()
-                )
-                self.writer.add_scalar(
-                    "rate", self.lr_scheduler.get_last_lr()[0]
-                )
-                #self._log_scalars(self.train_metrics)
-                #self._log_batch(batch_idx, batch)
+                self.writer.add_scalar("train loss", batch["loss"].item())
+                self.writer.add_scalar("rate", self.lr_scheduler.get_last_lr()[0])
+                # self._log_scalars(self.train_metrics)
+                # self._log_batch(batch_idx, batch)
                 # we don't want to reset train metrics at the start of every epoch
                 # because we are interested in recent train metrics
-                #last_train_metrics = self.train_metrics.result()
-                #self.train_metrics.reset()
-            self.step+=1
+                # last_train_metrics = self.train_metrics.result()
+                # self.train_metrics.reset()
+            self.step += 1
             if batch_idx + 1 >= self.epoch_len:
                 break
-        logs = {
-            "val_loss": 0
-        }
+        logs = {"val_loss": 0}
         # Run val/test
         for part, dataloader in self.evaluation_dataloaders.items():
             val_logs = self._evaluation_epoch(epoch, part, dataloader)
@@ -275,9 +269,9 @@ class BaseTrainer:
         """
         self.is_train = False
         self.model.eval()
-        #self.evaluation_metrics.reset()
+        # self.evaluation_metrics.reset()
         loss = 0
-        #pick_packet = 0
+        # pick_packet = 0
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -286,10 +280,10 @@ class BaseTrainer:
             ):
                 batch = self.process_batch(
                     batch,
-                    #log_plots = (batch_idx == pick_packet)
-                    #metrics=self.evaluation_metrics,
+                    # log_plots = (batch_idx == pick_packet)
+                    # metrics=self.evaluation_metrics,
                 )
-                loss+=batch['loss'].item()
+                loss += batch["loss"].item()
             loss = loss / len(dataloader)
             self.writer.set_step(epoch * self.epoch_len, part)
             self.logger.debug(
@@ -297,17 +291,13 @@ class BaseTrainer:
                     epoch, self._progress(batch_idx), loss
                 )
             )
-            self.writer.add_scalar(
-                "Val Loss", loss
-            )
-            #self._log_scalars(self.evaluation_metrics)
-            #self._log_batch(
+            self.writer.add_scalar("Val Loss", loss)
+            # self._log_scalars(self.evaluation_metrics)
+            # self._log_batch(
             #    batch_idx, batch, part
-            #)  # log only the last batch during inference
-        return {
-            "loss": loss
-        }
-        #return self.evaluation_metrics.result()
+            # )  # log only the last batch during inference
+        return {"loss": loss}
+        # return self.evaluation_metrics.result()
 
     def _monitor_performance_loss(self, logs, not_improved_count):
         """
@@ -334,7 +324,7 @@ class BaseTrainer:
             not_improved_count = 0
             best = True
         else:
-            not_improved_count+=1
+            not_improved_count += 1
         if not_improved_count >= self.early_stop:
             self.logger.info(
                 "Validation performance didn't improve for {} epochs. "
@@ -342,8 +332,6 @@ class BaseTrainer:
             )
             stop_process = True
         return best, stop_process, not_improved_count
-
-
 
     def _monitor_performance(self, logs, not_improved_count):
         """

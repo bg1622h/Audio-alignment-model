@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+
 class WandBWriter:
     """
     Class for experiment tracking via WandB.
@@ -99,7 +100,7 @@ class WandBWriter:
             object_name (str): updated object name.
         """
         return f"{object_name}"
-    
+
     def add_checkpoint(self, checkpoint_path, save_dir):
         """
         Log checkpoints to the experiment tracker.
@@ -155,6 +156,7 @@ class WandBWriter:
         self.wandb.log(
             {self._object_name(image_name): self.wandb.Image(image)}, step=self.step
         )
+
     def add_audio(self, audio_name, audio, sample_rate=None):
         """
         Log an audio to the experiment tracker.
