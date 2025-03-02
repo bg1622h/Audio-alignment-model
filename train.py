@@ -30,9 +30,10 @@ def main(config):
 
     if config.trainer.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Cuda count: {torch.cuda.device_count()}")
     else:
         device = config.trainer.device
-
+    print(device)
     # setup data_loader instances
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)

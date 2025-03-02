@@ -6,6 +6,7 @@ import librosa
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset,ConcatDataset
+from tqdm import tqdm
 def midi_processing(midi_path, hop_size, sr, audio_size):
     midi_data = pretty_midi.PrettyMIDI(midi_path)
     data = []
@@ -103,7 +104,7 @@ class AudioDataset(BaseDataset):
         self.midi_files = self.midi_files[:dataset_size]
 
         datasets = []
-        for audio_file, midi_file in zip(self.audio_files, self.midi_files):
+        for audio_file, midi_file in tqdm(zip(self.audio_files, self.midi_files)):
             name_audio = os.path.splitext(audio_file)[0]
             name_midi = os.path.splitext(midi_file)[0]
             if name_audio != name_midi:
