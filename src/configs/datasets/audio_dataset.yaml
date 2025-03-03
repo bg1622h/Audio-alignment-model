@@ -1,16 +1,18 @@
 train:
   _target_: src.datasets.AudioDataset
   audio_dir: "./dataset/train"
-  midi_dir: "./dataset/train"
+  midi_dir: "./dataset/midi_dir/train"
   hop_size: 1024
   new_sr: 44100
-  frame_size: 1
+  dataset_size: 64
+  frame_size: 10
 val:
-  _target_: src.datasets.AudioDataset
+  _target_: src.datasets.test_AudioDataset
   audio_dir: "./dataset/val"
-  midi_dir: "./dataset/val"
+  midi_dir: "./dataset/midi_dir/val"
   hop_size: 1024
   new_sr: 44100
+  dataset_size: 1
   frame_size: 1
 #test:
 #  _target_: src.datasets.AudioDataset

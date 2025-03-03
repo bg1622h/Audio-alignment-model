@@ -280,7 +280,7 @@ class BaseTrainer:
             ):
                 batch = self.process_batch(
                     batch,
-                    # log_plots = (batch_idx == pick_packet)
+                    log_plots=(batch_idx == 0)
                     # metrics=self.evaluation_metrics,
                 )
                 loss += batch["loss"].item()

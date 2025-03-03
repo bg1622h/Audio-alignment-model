@@ -32,7 +32,45 @@ class mctc_we_loss(nn.CTCLoss):
             reduction == "none"
         ), "This loss is not tested with other reductions. Please apply reductions afterwards explicitly"
 
-    def forward(self, log_probs, targets, input_lengths, target_lengths):
+    # The first dimension is expected to be batch_size.
+    # The code below leaves unique columns in the sense of removing duplicates throughout the array,
+    # and leaves only those columns where there is a change in values from the previous column.
+    # It then adds 0 column corresponding to silence
+    def forward(self, outputs, targ_excerpt, device):
+        all_losses = 0
+        for y_pred, batch_target in zip(outputs, targ_excerpt):
+            inds = np.concatenate(
+                (
+                    np.array([0]),
+                    1
+                    + np.where(
+                        (batch_target[:, 1:] != batch_target[:, :-1]).any(axis=0)
+                    )[0],
+                )
+            )
+            target_np = batch_target[:, inds]
+            target_blank = np.zeros((target_np.shape[0] + 1, target_np.shape[1] + 1))
+            target_blank[1:, 1:] = target_np
+            target_blank[0, 0] = 1
+            targets = torch.tensor(target_blank, dtype=torch.float32).to(device)
+            # targets = torch.tensor(batch_target.T)
+            log_probs = y_pred.squeeze().transpose(1, 2)
+            input_lengths = torch.tensor(log_probs.size(-1), dtype=torch.long).to(
+                device
+            )
+            target_lengths = torch.tensor(targets.size(-1), dtype=torch.long).to(device)
+            loss_input = {
+                "targets": targets,
+                "log_probs": log_probs,
+                "input_lengths": input_lengths,
+                "target_lengths": target_lengths,
+            }
+            all_losses = all_losses + self.forward_once(**loss_input) / (
+                input_lengths * target_lengths
+            )
+        return all_losses / len(targ_excerpt)
+
+    def forward_once(self, log_probs, targets, input_lengths, target_lengths):
         ctc_loss = nn.CTCLoss(reduction=self.reduction)
         # Prepare targets
         # print(targets.shape)
