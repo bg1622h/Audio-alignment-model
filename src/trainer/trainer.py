@@ -41,7 +41,7 @@ class Trainer(BaseTrainer):
 
         outputs = self.model(**batch)
         labels = batch["notes"]
-        targ_excerpt = labels.detach().numpy().transpose(0, 2, 1)
+        targ_excerpt = labels.detach().permute(0, 2, 1)
         loss = self.criterion(
             outputs=outputs, targ_excerpt=targ_excerpt, device=self.device
         )

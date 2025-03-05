@@ -28,18 +28,24 @@ class MusicDataset(Dataset):
         return 1
 
     def __getitem__(self, index):
-        waveform, sr = librosa.load(self.audio_file, sr=None)
-        if sr != self.new_sr:
-            waveform = librosa.resample(waveform, orig_sr=sr, target_sr=self.new_sr)
-            sr = self.new_sr
         loaded_midi_data = load_npz(self.midi_file)
         midi_data = np.array(loaded_midi_data.toarray())
         midi_data = torch.tensor(midi_data, dtype=torch.float32)
-        slice_length = (sr // self.hop_size + 1) * self.frame_size
+        slice_length = (self.new_sr // self.hop_size + 1) * self.frame_size
         start_index = np.random.randint(0, midi_data.shape[0] - slice_length + 1)
-        waveform = waveform[
-            start_index * self.hop_size : (start_index + slice_length) * self.hop_size
-        ]
+        # waveform, sr = librosa.load(self.audio_file,sr=None)
+        waveform, sr = librosa.load(
+            self.audio_file,
+            sr=None,
+            duration=(slice_length * self.hop_size) / (self.new_sr),
+            offset=(start_index * self.hop_size) / (self.new_sr),
+        )
+        if sr != self.new_sr:
+            waveform = librosa.resample(waveform, orig_sr=sr, target_sr=self.new_sr)
+            sr = self.new_sr
+        # waveform = waveform[
+        #     start_index * self.hop_size : (start_index + slice_length) * self.hop_size
+        # ]
         waveform_cqt = librosa.cqt(
             waveform,
             sr=sr,

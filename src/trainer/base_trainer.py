@@ -190,7 +190,6 @@ class BaseTrainer:
             # best, stop_process, not_improved_count = self._monitor_performance(
             #    logs, not_improved_count
             # )
-
             # if epoch % self.save_period == 0 or best:
             #    self._save_checkpoint(epoch, save_best=best, only_best=True)
             # self._save_checkpoint(epoch, save_best=best, only_best=True)

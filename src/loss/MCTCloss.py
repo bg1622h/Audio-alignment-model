@@ -39,17 +39,26 @@ class mctc_we_loss(nn.CTCLoss):
     def forward(self, outputs, targ_excerpt, device):
         all_losses = 0
         for y_pred, batch_target in zip(outputs, targ_excerpt):
-            inds = np.concatenate(
-                (
-                    np.array([0]),
-                    1
-                    + np.where(
-                        (batch_target[:, 1:] != batch_target[:, :-1]).any(axis=0)
-                    )[0],
-                )
+            diff = (batch_target[:, 1:] != batch_target[:, :-1]).any(dim=0)
+            change_indices = torch.where(diff)[0]
+            change_indices = change_indices + 1
+            inds = torch.cat(
+                (torch.tensor([0], device=batch_target.device), change_indices)
             )
+            # inds = np.concatenate(
+            #    (
+            #        np.array([0]),
+            #        1
+            #        + np.where(
+            #            (batch_target[:, 1:] != batch_target[:, :-1]).any(axis=0)
+            #        )[0],
+            #    )
+            # )
             target_np = batch_target[:, inds]
-            target_blank = np.zeros((target_np.shape[0] + 1, target_np.shape[1] + 1))
+            target_blank = torch.zeros(
+                (target_np.shape[0] + 1, target_np.shape[1] + 1), device=device
+            )
+            # target_blank = np.zeros((target_np.shape[0] + 1, target_np.shape[1] + 1))
             target_blank[1:, 1:] = target_np
             target_blank[0, 0] = 1
             targets = torch.tensor(target_blank, dtype=torch.float32).to(device)
