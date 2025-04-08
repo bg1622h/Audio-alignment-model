@@ -22,24 +22,22 @@ SOFTWARE.
 
 ---
 
-### License Exceptions
+   License Exceptions
 
-1. **GPL-3.0 Code**:
-   - The file `src/model/Unet.py` is derived from [Pytorch-UNet](https://github.com/milesial/Pytorch-UNET) and is licensed under **GNU General Public License v3.0 (GPL-3.0)**.
-   - This file is **excluded** from the MIT License terms above.
+1.   GPL-3.0 Code:
+   - The file `src/model/Unet.py` is derived from Pytorch-UNet (https://github.com/milesial/Pytorch-UNET) and is licensed under GNU General Public License v3.0 (GPL-3.0).
+   - This file is excluded from the MIT License terms above.
    - Any use or distribution of `Unet.py` must comply with GPL-3.0 requirements (e.g., disclosing source code of derivative works).
-   - Full license text: [https://www.gnu.org/licenses/gpl-3.0.en.html](https://www.gnu.org/licenses/gpl-3.0.en.html).
+   - Full license text: https://www.gnu.org/licenses/gpl-3.0.en.html.
 
-2. **Repository Template**:
-   - The project structure is based on the **MIT-licensed** template [pytorch_project_template](https://github.com/Blinorot/pytorch_project_template).
+2.   Repository Template:
+   - The project structure is based on the MIT-licensed template pytorch_project_template: https://github.com/Blinorot/pytorch_project_template.
    - Original copyright notice (to be preserved):
-     ```
-     Portions of this repository's structure are derived from pytorch_project_template (MIT License), Copyright (c) [2024] Blinorot.
-     ```
+     Portions of this repository's structure are derived from pytorch_project_template (MIT License), Copyright (c) 2024 Blinorot.
 
-3. **MIT-Licensed Dependencies**:
+3.   MIT-Licensed Dependencies:
    - The following files include code from MIT-licensed projects:
-     - `src/model/Conformer.py` from [conformer](https://github.com/lucidrains/conformer?tab=MIT-1-ov-file), Copyright (c) 2020 Phil Wang.
+     - `src/model/Conformer.py` from conformer: https://github.com/lucidrains/conformer, Copyright (c) 2020 Phil Wang.
    - These files retain their original MIT License terms. Only attribution and copyright preservation are required.
 
 ---
