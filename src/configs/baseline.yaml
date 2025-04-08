@@ -1,25 +1,26 @@
 defaults:
-  - model: Conformer_S
+  - model: UNet
   - writer: wandb
-  - metrics: example
+  - metrics: AlignmentMetric
   - datasets: audio_dataset
   - dataloader: audio_dataset
   - transforms: example
   - _self_
 optimizer:
   _target_: torch.optim.Adam
-  lr: 3e-4
+  lr: 5e-3
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
   T_max: null #None means unknow and should be initialize after dataloader
+  eta_min: 1e-5
 loss_function:
   _target_: src.loss.MCTCloss.mctc_we_loss
 trainer:
-  log_step: 50
-  n_epochs: 30
+  log_step: 256
+  n_epochs: 50
   epoch_len: null
   device_tensors: ["audio","notes"] # which tensors should be on device (ex. GPU)
-  resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
+  resume_from: "model_best.pth" # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
   override: True # if True, will override the previous run with the same name
   monitor: "max test_MulticlassAccuracy" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric

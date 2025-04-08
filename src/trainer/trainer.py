@@ -1,9 +1,5 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
-from src.logger.utils import create_log_plot
-from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
 
@@ -12,7 +8,7 @@ class Trainer(BaseTrainer):
     Trainer class. Defines the logic of batch logging and processing.
     """
 
-    def process_batch(self, batch, log_plots=False):  # , metrics: MetricTracker):
+    def process_batch(self, batch, metrics=None, log_plots=False):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -34,9 +30,7 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        # metric_funcs = self.metrics["inference"]
         if self.is_train:
-            # metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
 
         outputs = self.model(**batch)
@@ -56,43 +50,9 @@ class Trainer(BaseTrainer):
             self.log_plots(
                 batch=batch, target=targ_excerpt, outputs=outputs, count_samples=4
             )
-        # update metrics for each loss (in case of multiple losses)
-        # for loss_name in self.config.writer.loss_names:
-        #    metrics.update(loss_name, batch[loss_name].item())
-
-        # for met in metric_funcs:
-        #    metrics.update(met.name, met(**batch))
+        if metrics:
+            TP, FP, FN = metrics(outputs, labels)
+            batch.update({"TP": TP})
+            batch.update({"FP": FP})
+            batch.update({"FN": FN})
         return batch
-
-    def log_plots(self, batch, target, outputs, count_samples):
-        self.writer.add_image(
-            "Visualization",
-            create_log_plot(
-                batch["audio"][:count_samples],
-                target[:count_samples],
-                np.transpose(outputs[:count_samples, 1, :, 1:], (0, 2, 1)),
-            ),
-        )
-
-    def _log_batch(self, batch_idx, batch, mode="train"):
-        """
-        Log data from batch. Calls self.writer.add_* to log data
-        to the experiment tracker.
-
-        Args:
-            batch_idx (int): index of the current batch.
-            batch (dict): dict-based batch after going through
-                the 'process_batch' function.
-            mode (str): train or inference. Defines which logging
-                rules to apply.
-        """
-        # method to log data from you batch
-        # such as audio, text or images, for example
-
-        # logging scheme might be different for different partitions
-        if mode == "train":  # the method is called only every self.log_step steps
-            # Log Stuff
-            pass
-        else:
-            # Log Stuff
-            pass

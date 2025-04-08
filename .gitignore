@@ -106,6 +106,7 @@ check_script.py
 # input data, saved log, checkpoints, hydra outputs
 data/
 dataset/
+SWD/
 dataset_validate/
 input/
 saved/
@@ -114,9 +115,11 @@ wandb/
 outputs/
 libdl/
 libfmp/
+midi_dir/
 *csv
 *npy
 *npz
+*pth
 
 # editor, os cache directory
 .vscode/

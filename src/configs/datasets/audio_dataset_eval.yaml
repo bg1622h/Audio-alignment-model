@@ -1,0 +1,9 @@
+val:
+  _target_: src.datasets.AudioDataset_hcqt
+  audio_dir: "./SWD"
+  midi_dir: "./SWD"
+  hop_size: 512
+  new_sr: 22050
+  frame_size: 10
+  dataset_size: 1
+  is_train: False

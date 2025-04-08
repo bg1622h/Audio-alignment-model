@@ -19,6 +19,7 @@ decorator==5.1.1
 distlib==0.3.9
 docker-pycreds==0.4.0
 dulwich==0.22.7
+einops==0.8.1
 everett==3.1.0
 executing==2.2.0
 filelock==3.17.0

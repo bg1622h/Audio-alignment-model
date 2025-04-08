@@ -1,24 +1,17 @@
 train:
-  _target_: src.datasets.AudioDataset
+  _target_: src.datasets.AudioDataset_hcqt
   audio_dir: "./dataset/train"
-  midi_dir: "./dataset/midi_dir/train"
-  hop_size: 1024
-  new_sr: 44100
-  dataset_size: 5
+  midi_dir: "./midi_dir/train"
+  hop_size: 512
+  new_sr: 22050
   frame_size: 10
+  is_train: True
 val:
-  _target_: src.datasets.test_AudioDataset
-  audio_dir: "./dataset/val"
-  midi_dir: "./dataset/midi_dir/val"
-  hop_size: 1024
-  new_sr: 44100
+  _target_: src.datasets.AudioDataset_hcqt
+  audio_dir: "./SWD"
+  midi_dir: "./SWD"
+  hop_size: 512
+  new_sr: 22050
+  frame_size: 10
   dataset_size: 1
-  frame_size: 1
-#test:
-#  _target_: src.datasets.AudioDataset
-#  audio_dir: "./dataset"
-#  midi_dir: "./dataset"
-#  hop_size: 2048
-#  dataset_size: 1
-#  new_sr: 22050
-#  frame_size: 1
+  is_train: False

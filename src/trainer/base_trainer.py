@@ -7,6 +7,7 @@ from torch.nn.utils import clip_grad_norm_
 from tqdm.auto import tqdm
 
 from src.datasets.data_utils import inf_loop
+from src.metrics.alignment_metric import AlignmentMetric
 from src.metrics.tracker import MetricTracker
 from src.utils.io_utils import ROOT_PATH
 
@@ -20,7 +21,7 @@ class BaseTrainer:
         self,
         model,
         criterion,
-        # metrics,
+        metrics,
         optimizer,
         lr_scheduler,
         config,
@@ -73,7 +74,7 @@ class BaseTrainer:
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
         self.step = 0
-        self.loss_best = 1e9
+        self.loss_best = -1
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -118,21 +119,8 @@ class BaseTrainer:
         # setup visualization writer instance
         self.writer = writer
 
-        # define metrics
-        # self.metrics = metrics
-        # self.train_metrics = MetricTracker(
-        #    *self.config.writer.loss_names,
-        #    "grad_norm",
-        #    *[m.name for m in self.metrics["train"]],
-        #    writer=self.writer,
-        # )
-        # self.evaluation_metrics = MetricTracker(
-        #    *self.config.writer.loss_names,
-        #    *[m.name for m in self.metrics["inference"]],
-        #    writer=self.writer,
-        # )
-
         # define checkpoint dir and init everything if required
+        self.metric_object = metrics
 
         self.checkpoint_dir = (
             ROOT_PATH / config.trainer.save_dir / config.writer.run_name
@@ -185,16 +173,6 @@ class BaseTrainer:
                 self._save_checkpoint(epoch, save_best=best, only_best=True)
             if stop_process:
                 break
-            # evaluate model performance according to configured metric,
-            # save best checkpoint as model_best
-            # best, stop_process, not_improved_count = self._monitor_performance(
-            #    logs, not_improved_count
-            # )
-            # if epoch % self.save_period == 0 or best:
-            #    self._save_checkpoint(epoch, save_best=best, only_best=True)
-            # self._save_checkpoint(epoch, save_best=best, only_best=True)
-            # if stop_process:  # early_stop
-            #    break
 
     def _train_epoch(self, epoch):
         """
@@ -209,7 +187,6 @@ class BaseTrainer:
         """
         self.is_train = True
         self.model.train()
-        # self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
         for batch_idx, batch in enumerate(
@@ -227,8 +204,6 @@ class BaseTrainer:
                     continue
                 else:
                     raise e
-            # self.train_metrics.update("grad_norm", self._get_grad_norm())
-
             # log current results
             if self.step % self.log_step == 0:
                 self.writer.set_step(self.step, "train")
@@ -239,12 +214,6 @@ class BaseTrainer:
                 )
                 self.writer.add_scalar("train loss", batch["loss"].item())
                 self.writer.add_scalar("rate", self.lr_scheduler.get_last_lr()[0])
-                # self._log_scalars(self.train_metrics)
-                # self._log_batch(batch_idx, batch)
-                # we don't want to reset train metrics at the start of every epoch
-                # because we are interested in recent train metrics
-                # last_train_metrics = self.train_metrics.result()
-                # self.train_metrics.reset()
             self.step += 1
             if batch_idx + 1 >= self.epoch_len:
                 break
@@ -268,9 +237,10 @@ class BaseTrainer:
         """
         self.is_train = False
         self.model.eval()
-        # self.evaluation_metrics.reset()
         loss = 0
-        # pick_packet = 0
+        TP = 0
+        FP = 0
+        FN = 0
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -279,11 +249,20 @@ class BaseTrainer:
             ):
                 batch = self.process_batch(
                     batch,
-                    log_plots=(batch_idx == 0)
-                    # metrics=self.evaluation_metrics,
+                    metrics=self.metric_object,
                 )
+                TP += batch["TP"]
+                FP += batch["FP"]
+                FN += batch["FN"]
                 loss += batch["loss"].item()
             loss = loss / len(dataloader)
+            recall = 0
+            precision = 0
+            f1 = 0
+            if TP > 0:
+                recall = (TP) / (TP + FN)
+                precision = TP / (TP + FP)
+                f1 = 2.0 * precision * recall / (precision + recall)
             self.writer.set_step(epoch * self.epoch_len, part)
             self.logger.debug(
                 "Epoch: {} {} val_Loss: {:.6f}".format(
@@ -291,12 +270,10 @@ class BaseTrainer:
                 )
             )
             self.writer.add_scalar("Val Loss", loss)
-            # self._log_scalars(self.evaluation_metrics)
-            # self._log_batch(
-            #    batch_idx, batch, part
-            # )  # log only the last batch during inference
-        return {"loss": loss}
-        # return self.evaluation_metrics.result()
+            self.writer.add_scalar("Recall", recall)
+            self.writer.add_scalar("Precision", precision)
+            self.writer.add_scalar("F1", f1)
+        return {"loss": loss, "P": precision, "R": recall, "F1": f1}
 
     def _monitor_performance_loss(self, logs, not_improved_count):
         """
@@ -317,9 +294,9 @@ class BaseTrainer:
         """
         best = False
         stop_process = False
-        improved = logs["val_loss"] <= self.loss_best
+        improved = logs["val_F1"] >= self.loss_best
         if improved:
-            self.loss_best = logs["val_loss"]
+            self.loss_best = logs["val_F1"]
             not_improved_count = 0
             best = True
         else:
@@ -550,7 +527,7 @@ class BaseTrainer:
         """
         resume_path = str(resume_path)
         self.logger.info(f"Loading checkpoint: {resume_path} ...")
-        checkpoint = torch.load(resume_path, self.device)
+        checkpoint = torch.load(resume_path, self.device, weights_only=False)
         self.start_epoch = checkpoint["epoch"] + 1
         self.mnt_best = checkpoint["monitor_best"]
 
@@ -596,7 +573,7 @@ class BaseTrainer:
             self.logger.info(f"Loading model weights from: {pretrained_path} ...")
         else:
             print(f"Loading model weights from: {pretrained_path} ...")
-        checkpoint = torch.load(pretrained_path, self.device)
+        checkpoint = torch.load(pretrained_path, self.device, weights_only=False)
 
         if checkpoint.get("state_dict") is not None:
             self.model.load_state_dict(checkpoint["state_dict"])

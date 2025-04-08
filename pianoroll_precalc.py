@@ -6,7 +6,12 @@ import pretty_midi
 from scipy.sparse import csr_matrix, save_npz
 from tqdm import tqdm
 
-PITCHES_COUNT = 128
+PITCHES_COUNT = 128  # Number of notes in .midi format
+
+"""
+Piano roll precalculation script for CQT/HCQT sample rate(sr), hop_size parameters
+The calculated piano roll is saved in .npz format
+"""
 
 
 def midi_processing(midi_path, hop_size, sr, audio_size, midi_dir):
@@ -36,32 +41,19 @@ def process_audio(**kwargs):
     if sr != new_sr:
         waveform = librosa.resample(waveform, orig_sr=sr, target_sr=new_sr)
         sr = new_sr
-    # waveform_cqt = librosa.cqt(
-    #    waveform,
-    #    sr=sr,
-    #    hop_length=hop_size,
-    #    n_bins=144,
-    #    bins_per_octave=24,
-    #    fmin=librosa.note_to_hz("C1"),
-    # )
-    # waveform_cqt = np.abs(
-    #    waveform_cqt
-    # )  # column_count = floor(len(waveform)/hop_size) + 1
-    # if 1 + (len(waveform) // hop_size) != waveform_cqt.shape[1]:
-    #        print("oops")
     _ = midi_processing(
         midi_file,
         hop_size,
         sr,
-        1 + (len(waveform) // hop_size),
+        (len(waveform) // hop_size) - 1,
         midi_dir="midi_dir/train",
     )
 
 
-audio_dir = "./dataset/train"
-midi_dir = "./dataset/train"
-new_sr = 44100
-hop_size = 1024
+audio_dir = "./dataset/train"  # Directory with audio recordings in .wav, .mp3 format
+midi_dir = "./dataset/train"  # Directory with corresponding .midi annotations
+new_sr = 22050  # new sample rate
+hop_size = 512  # new hop_size
 audio_files = [f for f in os.listdir(audio_dir) if f.endswith((".wav", ".mp3"))]
 midi_files = [f for f in os.listdir(midi_dir) if f.endswith((".midi"))]
 midi_path_list = []

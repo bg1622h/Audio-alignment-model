@@ -34,7 +34,9 @@ def main(config):
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
+    model = instantiate(config.model)
+    model = torch.nn.DataParallel(model)
+    model = model.to(device)
     print(model)
 
     # get metrics

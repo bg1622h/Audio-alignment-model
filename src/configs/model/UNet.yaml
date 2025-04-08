@@ -1,0 +1,4 @@
+_target_: src.model.UNet
+n_channels: 6
+n_classes: 73
+bilinear: True

@@ -1,14 +1,11 @@
-import os
-from itertools import groupby
-
-import numpy as np
-import scipy
-import torch
-import torch.nn as nn
-
 """
 Taken from: https://github.com/christofw/multipitch_mctc/blob/main/libdl/nn_losses/mctc.py
 """
+from itertools import groupby
+
+import numpy as np
+import torch
+import torch.nn as nn
 
 
 class mctc_we_loss(nn.CTCLoss):
@@ -45,24 +42,13 @@ class mctc_we_loss(nn.CTCLoss):
             inds = torch.cat(
                 (torch.tensor([0], device=batch_target.device), change_indices)
             )
-            # inds = np.concatenate(
-            #    (
-            #        np.array([0]),
-            #        1
-            #        + np.where(
-            #            (batch_target[:, 1:] != batch_target[:, :-1]).any(axis=0)
-            #        )[0],
-            #    )
-            # )
             target_np = batch_target[:, inds]
             target_blank = torch.zeros(
                 (target_np.shape[0] + 1, target_np.shape[1] + 1), device=device
             )
-            # target_blank = np.zeros((target_np.shape[0] + 1, target_np.shape[1] + 1))
             target_blank[1:, 1:] = target_np
             target_blank[0, 0] = 1
             targets = torch.tensor(target_blank, dtype=torch.float32).to(device)
-            # targets = torch.tensor(batch_target.T)
             log_probs = y_pred.squeeze().transpose(1, 2)
             input_lengths = torch.tensor(log_probs.size(-1), dtype=torch.long).to(
                 device
@@ -82,8 +68,6 @@ class mctc_we_loss(nn.CTCLoss):
     def forward_once(self, log_probs, targets, input_lengths, target_lengths):
         ctc_loss = nn.CTCLoss(reduction=self.reduction)
         # Prepare targets
-        # print(targets.shape)
-        # print(log_probs.shape)
         char_unique, char_target = torch.unique(
             targets, dim=1, return_inverse=True
         )  # char_unique is the BatchCharacterList
@@ -99,10 +83,6 @@ class mctc_we_loss(nn.CTCLoss):
         target_lengths = torch.tensor(target_torch.size(1), dtype=torch.long)
         # Prepare inputs
         input_logsoftmax = log_probs.unsqueeze(2)
-        # print((1-char_unique[:, 1:].transpose(0, -1)).shape)
-        # print((torch.squeeze(input_logsoftmax[0, :, :, :]).shape))
-        # print(char_unique[:, 1:].transpose(0, -1).shape)
-        # print(torch.squeeze(input_logsoftmax[1, :, :, :]).shape)
         char_probs_nonblank = torch.matmul(
             1 - char_unique[:, 1:].transpose(0, -1),
             torch.squeeze(input_logsoftmax[0, :, :, :]),

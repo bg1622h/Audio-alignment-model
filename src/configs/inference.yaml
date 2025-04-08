@@ -1,13 +1,13 @@
 defaults:
-  - model: baseline
-  - metrics: example
-  - datasets: example_eval # we do not want to run inference on training data
-  - dataloader: example
+  - model: UNet
+  - metrics: AlignmentMetric
+  - datasets: audio_dataset_eval   # we do not want to run inference on training data
+  - dataloader: audio_dataset_eval
   - transforms: example
   - _self_
 inferencer:
-  device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["audio","notes"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
-  save_path: "example" # any name here, can be a dataset name
+  save_path: "predict" # any name here, can be a dataset name
   seed: 1
-  from_pretrained: "saved/model_best.pth" # path to the pretrained model
+  from_pretrained: "saved/UNet_hcqt/model_best.pth" # path to the pretrained model

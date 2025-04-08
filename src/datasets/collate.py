@@ -19,7 +19,6 @@ def collate_fn(batch):
     notes = [item["notes"] for item in batch]
     audio = torch.stack(audio)
     notes = torch.stack(notes)
-    # notes = torch.nn.utils.rnn.pad_sequence(notes, batch_first=True, padding_value=0)
     return {
         "audio": audio,
         "notes": notes,

@@ -1,0 +1,6 @@
+_target_: src.model.Conformer
+input_dim: 216
+num_classes: 73
+num_blocks: 16
+d_model: 144
+nhead: 4

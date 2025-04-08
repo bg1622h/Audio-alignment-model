@@ -1,6 +1,6 @@
 _target_: src.model.AudioAligmentModel
-input_dim: 144
-num_classes: 129
+input_dim: 216
+num_classes: 73
 num_blocks: 16
 d_model: 256
 nhead: 4

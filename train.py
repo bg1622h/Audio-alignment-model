@@ -42,11 +42,13 @@ def main(config):
     model = instantiate(config.model)
     model = torch.nn.DataParallel(model)
     model = model.to(device)
+    for name, param in model.named_parameters():
+        print(f"{name}: requires_grad = {param.requires_grad}")
     logger.info(model)
 
     # get function handles of loss and metrics
     loss_function = instantiate(config.loss_function).to(device)
-    # metrics = instantiate(config.metrics)
+    metrics = instantiate(config.metrics)
 
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
@@ -62,7 +64,7 @@ def main(config):
     trainer = Trainer(
         model=model,
         criterion=loss_function,
-        # metrics=metrics,
+        metrics=metrics,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         config=config,

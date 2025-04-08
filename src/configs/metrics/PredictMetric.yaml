@@ -1,0 +1,8 @@
+device: "auto"
+train: # metrics that are calculated during training
+  - _target_: src.metrics.PredictMetric
+    threshold: 0.5
+
+inference: # metrics that are calculated during inference (eval)
+  - _target_: src.metrics.PredictMetric
+    threshold: 0.25

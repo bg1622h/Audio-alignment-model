@@ -1,3 +1,5 @@
+import shutil
+
 import torch
 from tqdm.auto import tqdm
 
@@ -67,14 +69,7 @@ class Inferencer(BaseTrainer):
         self.save_path = save_path
 
         # define metrics
-        self.metrics = metrics
-        if self.metrics is not None:
-            self.evaluation_metrics = MetricTracker(
-                *[m.name for m in self.metrics["inference"]],
-                writer=None,
-            )
-        else:
-            self.evaluation_metrics = None
+        self.evaluation_metrics = metrics
 
         if not skip_model_load:
             # init model
@@ -123,29 +118,25 @@ class Inferencer(BaseTrainer):
         batch.update(outputs)
 
         if metrics is not None:
-            for met in self.metrics["inference"]:
-                metrics.update(met.name, met(**batch))
+            TP, FP, FN = metrics(outputs, batch["notes"])
+            batch.update({"TP": TP})
+            batch.update({"FP": FP})
+            batch.update({"FN": FN})
 
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = batch["logits"].shape[0]
+        batch_size = batch["notes"].shape[0]
         current_id = batch_idx * batch_size
 
         for i in range(batch_size):
             # clone because of
             # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
-
+            probabilities = outputs[i].clone()
             output_id = current_id + i
-
             output = {
-                "pred_label": pred_label,
-                "label": label,
+                "predicted probabilities": probabilities,
             }
-
             if self.save_path is not None:
                 # you can use safetensors or other lib here
                 torch.save(output, self.save_path / part / f"output_{output_id}.pth")
@@ -165,13 +156,15 @@ class Inferencer(BaseTrainer):
 
         self.is_train = False
         self.model.eval()
-
-        self.evaluation_metrics.reset()
+        # clear Save dir
+        if self.save_path is not None:
+            shutil.rmtree(self.save_path, ignore_errors=True)
 
         # create Save dir
-        if self.save_path is not None:
-            (self.save_path / part).mkdir(exist_ok=True, parents=True)
-
+        (self.save_path / part).mkdir(exist_ok=True, parents=True)
+        TP = 0
+        FP = 0
+        FN = 0
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -184,5 +177,14 @@ class Inferencer(BaseTrainer):
                     part=part,
                     metrics=self.evaluation_metrics,
                 )
-
-        return self.evaluation_metrics.result()
+                TP += batch["TP"]
+                FP += batch["FP"]
+                FN += batch["FN"]
+        recall = 0
+        precision = 0
+        f1 = 0
+        if TP > 0:
+            recall = (TP) / (TP + FN)
+            precision = TP / (TP + FP)
+            f1 = 2.0 * precision * recall / (precision + recall)
+        return {"P": precision, "R": recall, "F1": f1}
