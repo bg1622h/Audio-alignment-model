@@ -1,11 +1,12 @@
-"""
-Taken from: https://github.com/christofw/multipitch_mctc/blob/main/libdl/nn_losses/mctc.py
-"""
 from itertools import groupby
 
 import numpy as np
 import torch
 import torch.nn as nn
+
+"""
+Taken from: https://github.com/christofw/multipitch_mctc/blob/main/libdl/nn_losses/mctc.py
+"""
 
 
 class mctc_we_loss(nn.CTCLoss):

@@ -1,7 +1,3 @@
-"""
-The implementation is taken from: https://github.com/lucidrains/conformer
-"""
-
 import torch
 import torch.nn.functional as F
 from einops import rearrange
