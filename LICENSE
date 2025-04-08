@@ -22,7 +22,7 @@ SOFTWARE.
 
 ---
 
-   License Exceptions
+   This project includes:
 
 1.   GPL-3.0 Code:
    - The file src/model/Unet.py is derived from Pytorch-UNet (https://github.com/milesial/Pytorch-UNET) and is licensed under GNU General Public License v3.0 (GPL-3.0).
