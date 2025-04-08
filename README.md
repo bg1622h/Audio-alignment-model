@@ -49,6 +49,10 @@ Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` 
 
 The default config is `src/configs/baseline.yaml`
 
+Model weights and checkpoints are `./saved` in the saved folder
+
+Logging with `wandb` or `cometml` is supported
+
 To run inference (evaluate the model or save predictions):
 
 ```bash
@@ -56,6 +60,8 @@ python3 inference.py HYDRA_CONFIG_ARGUMENTS
 ```
 
 The default config is `src/configs/inference.yaml`
+
+Model predictions are saved in `./data/saved/{save_path}`.
 
 ## Useful Links:
 
